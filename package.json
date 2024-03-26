@@ -3,7 +3,10 @@
   "displayName": "FTL",
   "description": "VSCode extension for FTL",
   "version": "0.0.1",
-  "repository": { "type": "git", "url": "https://github.com/TBD54566975/ftl-vscode" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TBD54566975/ftl-vscode"
+  },
   "engines": {
     "vscode": "^1.87.0"
   },
@@ -14,6 +17,39 @@
     "onLanguage:kotlin",
     "onLanguage:go"
   ],
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "calicoColors.colorsView",
+          "name": "Calico Colors"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "calicoColors.addColor",
+        "category": "Calico Colors",
+        "title": "Add Color"
+      },
+      {
+        "command": "calicoColors.clearColors",
+        "category": "Calico Colors",
+        "title": "Clear Colors",
+        "icon": "$(clear-all)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "calicoColors.clearColors",
+          "group": "navigation",
+          "when": "view == calicoColors.colorsView"
+        }
+      ]
+    }
+  },
   "main": "./dist/extension.js",
   "scripts": {
     "vscode:prepublish": "npm run package",
