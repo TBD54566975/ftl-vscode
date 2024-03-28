@@ -18,37 +18,13 @@
     "onLanguage:go"
   ],
   "contributes": {
-    "views": {
-      "explorer": [
-        {
-          "type": "webview",
-          "id": "calicoColors.colorsView",
-          "name": "Calico Colors"
-        }
-      ]
-    },
     "commands": [
       {
-        "command": "calicoColors.addColor",
-        "category": "Calico Colors",
-        "title": "Add Color"
-      },
-      {
-        "command": "calicoColors.clearColors",
-        "category": "Calico Colors",
-        "title": "Clear Colors",
-        "icon": "$(clear-all)"
+        "command": "ftl.restart",
+        "title": "Restart FTL Service",
+        "category": "FTL"
       }
-    ],
-    "menus": {
-      "view/title": [
-        {
-          "command": "calicoColors.clearColors",
-          "group": "navigation",
-          "when": "view == calicoColors.colorsView"
-        }
-      ]
-    }
+    ]
   },
   "main": "./dist/extension.js",
   "scripts": {
