@@ -21,8 +21,17 @@
     "commands": [
       {
         "command": "ftl.restart",
-        "title": "Restart FTL Service",
+        "title": "Restart Service",
         "category": "FTL"
+      },
+      {
+        "command": "ftl.stop",
+        "title": "Stop Service",
+        "category": "FTL"
+      },
+      {
+        "command": "ftl.showPanel",
+        "title": "Show Panel"
       }
     ]
   },

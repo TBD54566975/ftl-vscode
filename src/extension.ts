@@ -6,10 +6,13 @@ import {
   ServerOptions,
 } from "vscode-languageclient/node";
 import * as vscode from "vscode";
+import { started, starting, stopped } from "./status";
 
 const clientName = "ftl languge server";
 const clientId = "ftl";
 let client: LanguageClient;
+let statusBarItem: vscode.StatusBarItem;
+let outputChannel: vscode.OutputChannel;
 
 export async function activate(context: ExtensionContext) {
   console.log('"ftl" extension activated');
@@ -22,8 +25,45 @@ export async function activate(context: ExtensionContext) {
     }
   );
 
-  startClient(context);
-  context.subscriptions.push(restartCmd, client);
+  let stopCmd = vscode.commands.registerCommand(
+    `${clientId}.stop`,
+    async () => {
+      await stopClient();
+    }
+  );
+
+  let showLogsCommand = vscode.commands.registerCommand("ftl.showLogs", () => {
+    outputChannel.show();
+  });
+
+  statusBarItem = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Right,
+    100
+  );
+  statusBarItem.command = "ftl.showLogs";
+  statusBarItem.show();
+
+  // Search for 'ftl-project.toml' or 'ftl.toml' in the workspace
+  const tomlFiles = await vscode.workspace.findFiles(
+    "**/{ftl-project.toml,ftl.toml}",
+    "**/node_modules/**",
+    1
+  );
+
+  if (tomlFiles.length > 0) {
+    startClient(context);
+  } else {
+    statusBarItem.text = `$(circle-slash) FTL`;
+    statusBarItem.tooltip =
+      "FTL is disabled because it requires an 'ftl-project.toml' or 'ftl.toml' file in the workspace.";
+  }
+
+  context.subscriptions.push(
+    restartCmd,
+    stopCmd,
+    statusBarItem,
+    showLogsCommand
+  );
 }
 
 export async function deactivate() {
@@ -32,6 +72,7 @@ export async function deactivate() {
 
 function startClient(context: ExtensionContext) {
   console.log("Starting client");
+  starting(statusBarItem);
   const ftlConfig = vscode.workspace.getConfiguration("ftl");
   const ftlPath = ftlConfig.get("installationPath") ?? "ftl";
 
@@ -48,24 +89,24 @@ function startClient(context: ExtensionContext) {
     return;
   }
 
-  console.log(ftlPath, "dev", workspaceRootPath);
-
   let serverOptions: ServerOptions = {
     run: {
       command: `${ftlPath}`,
-      args: ["dev", `${workspaceRootPath}`],
+      args: ["dev", `${workspaceRootPath}`, "--run-lsp", "--recreate"],
     },
     debug: {
       command: `${ftlPath}`,
-      args: ["dev", `${workspaceRootPath}`],
+      args: ["dev", `${workspaceRootPath}`, "--run-lsp", "--recreate"],
     },
   };
 
+  outputChannel = vscode.window.createOutputChannel("FTL Logs");
   let clientOptions: LanguageClientOptions = {
     documentSelector: [
       { scheme: "file", language: "kotlin" },
       { scheme: "file", language: "go" },
     ],
+    outputChannel,
   };
 
   client = new LanguageClient(
@@ -78,30 +119,34 @@ function startClient(context: ExtensionContext) {
   console.log("Starting client");
   client.start().then(
     () => {
-      console.log(`${clientName} started successfully.`);
-      // Any other initialization code that should run after the client has started
+      started(statusBarItem);
+      outputChannel.show();
     },
     (error) => {
-      console.error(`The ${clientName} failed to start:`, error);
+      error(statusBarItem, `Error starting ${clientName}: ${error}`);
+      outputChannel.appendLine(`Error starting ${clientName}: ${error}`);
+      outputChannel.show();
     }
   );
 
-  client.onDidChangeState((e) => {
-    console.log("Language server state changed", e);
-    // Optionally, attempt to restart the server or notify the user
-  });
+  context.subscriptions.push(client);
 }
 
 async function stopClient() {
   if (!client) {
     return;
   }
+  console.log("Disposing client");
 
-  process.kill(client["_serverProcess"].pid, "SIGINT");
+  if (client["_serverProcess"]) {
+    process.kill(client["_serverProcess"].pid, "SIGINT");
+  }
 
   //TODO: not sure why this isn't working well.
-  // await client.stop(2000);
+  // await client.stop();
 
-  console.log("Disposing client");
+  console.log("Client stopped");
   client.outputChannel.dispose();
+  console.log("Output channel disposed");
+  stopped(statusBarItem);
 }
