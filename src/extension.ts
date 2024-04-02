@@ -43,20 +43,7 @@ export async function activate(context: ExtensionContext) {
   statusBarItem.command = "ftl.showLogs";
   statusBarItem.show();
 
-  // Search for 'ftl-project.toml' or 'ftl.toml' in the workspace
-  const tomlFiles = await vscode.workspace.findFiles(
-    "**/{ftl-project.toml,ftl.toml}",
-    "**/node_modules/**",
-    1
-  );
-
-  if (tomlFiles.length > 0) {
-    startClient(context);
-  } else {
-    statusBarItem.text = `$(circle-slash) FTL`;
-    statusBarItem.tooltip =
-      "FTL is disabled because it requires an 'ftl-project.toml' or 'ftl.toml' file in the workspace.";
-  }
+  startClient(context);
 
   context.subscriptions.push(
     restartCmd,
@@ -74,7 +61,7 @@ function startClient(context: ExtensionContext) {
   console.log("Starting client");
   starting(statusBarItem);
   const ftlConfig = vscode.workspace.getConfiguration("ftl");
-  const ftlPath = ftlConfig.get("installationPath") ?? "ftl";
+  const ftlPath = ftlConfig.get("executablePath") ?? "ftl";
 
   let workspaceRootPath =
     vscode.workspace.workspaceFolders &&
@@ -117,19 +104,20 @@ function startClient(context: ExtensionContext) {
   );
 
   console.log("Starting client");
+  context.subscriptions.push(client);
+
   client.start().then(
     () => {
       started(statusBarItem);
       outputChannel.show();
     },
     (error) => {
+      console.log(`Error starting ${clientName}: ${error}`);
       error(statusBarItem, `Error starting ${clientName}: ${error}`);
       outputChannel.appendLine(`Error starting ${clientName}: ${error}`);
       outputChannel.show();
     }
   );
-
-  context.subscriptions.push(client);
 }
 
 async function stopClient() {
