@@ -14,10 +14,20 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:kotlin",
-    "onLanguage:go"
+    "workspaceContains:**/ftl-project.toml",
+    "workspaceContains:**/ftl.toml"
   ],
   "contributes": {
+    "configuration": {
+      "title": "FTL Extension Settings",
+      "properties": {
+        "ftl.executablePath": {
+          "type": "string",
+          "default": "ftl",
+          "description": "Path to the FTL executable. Leave as 'ftl' to use the system PATH."
+        }
+      }
+    },
     "commands": [
       {
         "command": "ftl.restart",
