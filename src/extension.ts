@@ -1,140 +1,144 @@
-import { ExtensionContext } from "vscode";
+import { ExtensionContext } from "vscode"
 
 import {
   LanguageClient,
   LanguageClientOptions,
   ServerOptions,
-} from "vscode-languageclient/node";
-import * as vscode from "vscode";
-import { started, starting, stopped } from "./status";
+} from "vscode-languageclient/node"
+import * as vscode from "vscode"
+import { started, starting, stopped } from "./status"
 
-const clientName = "ftl languge server";
-const clientId = "ftl";
-let client: LanguageClient;
-let statusBarItem: vscode.StatusBarItem;
-let outputChannel: vscode.OutputChannel;
+const clientName = "ftl languge server"
+const clientId = "ftl"
+let client: LanguageClient
+let statusBarItem: vscode.StatusBarItem
+let outputChannel: vscode.OutputChannel
 
 export async function activate(context: ExtensionContext) {
-  console.log('"ftl" extension activated');
+  console.log('"ftl" extension activated')
 
   let restartCmd = vscode.commands.registerCommand(
     `${clientId}.restart`,
     async () => {
-      await stopClient();
-      startClient(context);
+      await stopClient()
+      startClient(context)
     }
-  );
+  )
 
   let stopCmd = vscode.commands.registerCommand(
     `${clientId}.stop`,
     async () => {
-      await stopClient();
+      await stopClient()
     }
-  );
+  )
 
   let showLogsCommand = vscode.commands.registerCommand("ftl.showLogs", () => {
-    outputChannel.show();
-  });
+    outputChannel.show()
+  })
 
   statusBarItem = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Right,
     100
-  );
-  statusBarItem.command = "ftl.showLogs";
-  statusBarItem.show();
+  )
+  statusBarItem.command = "ftl.showLogs"
+  statusBarItem.show()
 
-  startClient(context);
+  startClient(context)
 
   context.subscriptions.push(
     restartCmd,
     stopCmd,
     statusBarItem,
     showLogsCommand
-  );
+  )
 }
 
 export async function deactivate() {
-  await stopClient();
+  await stopClient()
 }
 
 function startClient(context: ExtensionContext) {
-  console.log("Starting client");
-  starting(statusBarItem);
-  const ftlConfig = vscode.workspace.getConfiguration("ftl");
-  const ftlPath = ftlConfig.get("executablePath") ?? "ftl";
+  console.log("Starting client")
+  starting(statusBarItem)
+  const ftlConfig = vscode.workspace.getConfiguration("ftl")
+  const ftlPath = ftlConfig.get("executablePath") ?? "ftl"
+  const userFlags = ftlConfig.get<string[]>("devCommandFlags") ?? []
 
   let workspaceRootPath =
     vscode.workspace.workspaceFolders &&
     vscode.workspace.workspaceFolders.length > 0
       ? vscode.workspace.workspaceFolders[0].uri.fsPath
-      : null;
+      : null
 
   if (!workspaceRootPath) {
     vscode.window.showErrorMessage(
       "FTL extension requires an open folder to work correctly."
-    );
-    return;
+    )
+    return
   }
 
+  const flags = ["--lsp", ...userFlags]
   let serverOptions: ServerOptions = {
     run: {
       command: `${ftlPath}`,
-      args: ["dev", `${workspaceRootPath}`, "--run-lsp", "--recreate"],
+      args: ["dev", `.`, ...flags],
     },
     debug: {
       command: `${ftlPath}`,
-      args: ["dev", `${workspaceRootPath}`, "--run-lsp", "--recreate"],
+      args: ["dev", `.`, ...flags],
     },
-  };
+  }
 
-  outputChannel = vscode.window.createOutputChannel("FTL Logs");
+  console.log(serverOptions.debug.args)
+
+  outputChannel = vscode.window.createOutputChannel("FTL Logs")
   let clientOptions: LanguageClientOptions = {
     documentSelector: [
       { scheme: "file", language: "kotlin" },
       { scheme: "file", language: "go" },
     ],
     outputChannel,
-  };
+  }
 
   client = new LanguageClient(
     clientId,
     clientName,
     serverOptions,
     clientOptions
-  );
+  )
 
-  console.log("Starting client");
-  context.subscriptions.push(client);
+  console.log("Starting client")
+  context.subscriptions.push(client)
 
   client.start().then(
     () => {
-      started(statusBarItem);
-      outputChannel.show();
+      started(statusBarItem)
+      outputChannel.show()
     },
     (error) => {
-      console.log(`Error starting ${clientName}: ${error}`);
-      error(statusBarItem, `Error starting ${clientName}: ${error}`);
-      outputChannel.appendLine(`Error starting ${clientName}: ${error}`);
-      outputChannel.show();
+      console.log(`Error starting ${clientName}: ${error}`)
+      error(statusBarItem, `Error starting ${clientName}: ${error}`)
+      outputChannel.appendLine(`Error starting ${clientName}: ${error}`)
+      outputChannel.show()
     }
-  );
+  )
 }
 
 async function stopClient() {
   if (!client) {
-    return;
+    return
   }
-  console.log("Disposing client");
+  console.log("Disposing client")
 
   if (client["_serverProcess"]) {
-    process.kill(client["_serverProcess"].pid, "SIGINT");
+    process.kill(client["_serverProcess"].pid, "SIGINT")
   }
 
   //TODO: not sure why this isn't working well.
   // await client.stop();
 
-  console.log("Client stopped");
-  client.outputChannel.dispose();
-  console.log("Output channel disposed");
-  stopped(statusBarItem);
+  console.log("Client stopped")
+  client.outputChannel.dispose()
+  console.log("Output channel disposed")
+  stopped(statusBarItem)
 }
